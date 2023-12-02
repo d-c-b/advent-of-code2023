@@ -33,7 +33,7 @@ def parse_input() -> dict[int, list[defaultdict[str, int]]]:
         for round in rounds:
             round_dict: defaultdict[str, int] = defaultdict(int)
             for cube_input in round:
-                if not re.match(r"\d+ (red|green|blue)$", cube_input):
+                if not re.match(rf"\d+ ({'|'.join(CUBE_COLOURS)})$", cube_input):
                     raise Exception(f"Invalid input for round in: {game}")
                 for colour in CUBE_COLOURS:
                     if colour in cube_input:
