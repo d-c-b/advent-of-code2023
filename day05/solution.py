@@ -14,8 +14,7 @@ def parse_input() -> tuple[list[int], list[list[list[int]]]]:
 
 
 def find_in_ranges(num: int, ranges: list[list[int]]) -> int:
-    for map_range in ranges:
-        destination_start, source_start, range_size = map_range
+    for destination_start, source_start, range_size in ranges:
         if num >= source_start and num < source_start + range_size:
             return destination_start + num - source_start
     return num
