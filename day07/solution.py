@@ -17,8 +17,6 @@ CARD_VALUES_ORDER_ASC = (
     "A",
 )
 
-HANDS_ORDERED_ASC = ("HC", "1P", "2P", "3K", "FH", "4K", "5K")
-
 
 def parse_input() -> list[tuple[str, int]]:
     input_file = open(path.join(path.dirname(__file__), "input.txt"), "r")
@@ -27,12 +25,12 @@ def parse_input() -> list[tuple[str, int]]:
     return [(hand, int(bid)) for hand, bid in rounds]
 
 
-def determine_hand(hand: str, wildcard: str | None) -> str:
+def determine_hand_priority(hand: str, wildcard: str | None) -> int:
     comparison_hand = hand
 
     if wildcard:
         if hand == wildcard * 5:
-            return "5K"
+            return 7
         counted_raw = Counter(hand)
         most_common_non_wildcard_char = [
             char for char, _ in counted_raw.most_common() if char != wildcard
@@ -42,25 +40,24 @@ def determine_hand(hand: str, wildcard: str | None) -> str:
     counted = Counter(comparison_hand)
 
     if len(counted) == 1:
-        return "5K"
+        return 7
 
     if len(counted) == 2:
         if sorted(counted.values()) == [1, 4]:
-            return "4K"
+            return 6
         elif sorted(counted.values()) == [2, 3]:
-            return "FH"
-
+            return 5
     if len(counted) == 3:
         if sorted(counted.values()) == [1, 1, 3]:
-            return "3K"
+            return 4
         elif sorted(counted.values()) == [1, 2, 2]:
-            return "2P"
+            return 3
 
     if len(counted) == 4:
-        return "1P"
+        return 2
 
     if len(counted) == 5:
-        return "HC"
+        return 1
 
     raise Exception(f"Unable to determine hand type for hand: {hand}")
 
@@ -78,11 +75,11 @@ def sort_card_hands(
         )
 
     sorted_hands: list[tuple[str, int]] = []
-    for h in HANDS_ORDERED_ASC:
+    for hand_priority in range(1, 8):
         hands_of_type = [
             (hand, bid)
             for hand, bid in unsorted_hands
-            if determine_hand(hand, wildcard) == h
+            if determine_hand_priority(hand, wildcard) == hand_priority
         ]
         hand_type_sorted_by_highest_card = sorted(
             hands_of_type,
