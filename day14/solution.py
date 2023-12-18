@@ -5,87 +5,86 @@ import itertools
 class RockGrid:
     def __init__(
         self,
-        round_rocks: set[tuple[int, int]],
-        square_rocks: set[tuple[int, int]],
-        MAX_X: int,
-        MAX_Y: int,
+        grid: list[list[str]],
     ) -> None:
-        self.SEEN_STATES: dict[frozenset[tuple[int, int]], int] = dict()
-        self.round_rocks = round_rocks
-        self.square_rocks = square_rocks
-        self.MAX_X = MAX_X
-        self.MAX_Y = MAX_Y
+        self.SEEN_STATES: dict[tuple[tuple[str, ...], ...], int] = dict()
+        self.grid = grid
+        self.MAX_X = len(grid[0])
+        self.MAX_Y = len(grid)
 
     def calculate_load_on_north(
-        self, round_rocks: set[tuple[int, int]] | frozenset[tuple[int, int]]
+        self, grid: list[list[str]] | tuple[tuple[str, ...], ...]
     ) -> int:
         load = 0
-        for a, b in zip(range(self.MAX_Y), range(self.MAX_Y - 1, -1, -1)):
-            load += len([(x, y) for (x, y) in round_rocks if y == b]) * (a + 1)
-
+        for y in range(self.MAX_Y):
+            for x in range(self.MAX_X):
+                if grid[y][x] == "O":
+                    load += self.MAX_Y - y
         return load
 
     def roll_rocks_north(self):
-        for j in range(0, self.MAX_Y + 1):
-            for x, y in [(x, y) for (x, y) in self.round_rocks if y == j]:
+        for y in range(0, self.MAX_Y):
+            for x in range(0, self.MAX_X):
                 current = y
                 while (
                     current - 1 >= 0
-                    and (x, current - 1) not in self.round_rocks | self.square_rocks
+                    and self.grid[current][x] == "O"
+                    and self.grid[current - 1][x] not in "#O"
                 ):
-                    self.round_rocks.remove((x, current))
-                    self.round_rocks.add((x, current - 1))
-
+                    self.grid[current][x] = "."
+                    self.grid[current - 1][x] = "O"
                     current -= 1
 
     def roll_rocks_south(self):
-        for j in range(self.MAX_Y, -1, -1):
-            for x, y in [(x, y) for (x, y) in self.round_rocks if y == j]:
+        for y in range(self.MAX_Y - 1, -1, -1):
+            for x in range(0, self.MAX_X):
                 current = y
                 while (
-                    current + 1 <= self.MAX_Y - 1
-                    and (x, current + 1) not in self.round_rocks | self.square_rocks
+                    current + 1 < self.MAX_Y
+                    and self.grid[current][x] == "O"
+                    and self.grid[current + 1][x] not in "#O"
                 ):
-                    self.round_rocks.remove((x, current))
-                    self.round_rocks.add((x, current + 1))
-
+                    self.grid[current][x] = "."
+                    self.grid[current + 1][x] = "O"
                     current += 1
 
     def roll_rocks_east(self):
-        for i in range(self.MAX_X, -1, -1):
-            for x, y in [(x, y) for (x, y) in self.round_rocks if x == i]:
+        for x in range(self.MAX_X - 1, -1, -1):
+            for y in range(0, self.MAX_Y):
                 current = x
                 while (
-                    current + 1 <= self.MAX_X - 1
-                    and (current + 1, y) not in self.round_rocks | self.square_rocks
+                    current + 1 < self.MAX_X
+                    and self.grid[y][current] == "O"
+                    and self.grid[y][current + 1] not in "#O"
                 ):
-                    self.round_rocks.remove((current, y))
-                    self.round_rocks.add((current + 1, y))
+                    self.grid[y][current] = "."
+                    self.grid[y][current + 1] = "O"
                     current += 1
 
     def roll_rocks_west(self):
-        for i in range(0, self.MAX_X + 1):
-            for x, y in [(x, y) for (x, y) in self.round_rocks if x == i]:
+        for x in range(0, self.MAX_X):
+            for y in range(0, self.MAX_Y):
                 current = x
                 while (
                     current - 1 >= 0
-                    and (current - 1, y) not in self.round_rocks | self.square_rocks
+                    and self.grid[y][current] == "O"
+                    and self.grid[y][current - 1] not in "#O"
                 ):
-                    self.round_rocks.remove((current, y))
-                    self.round_rocks.add((current - 1, y))
-
+                    self.grid[y][current] = "."
+                    self.grid[y][current - 1] = "O"
                     current -= 1
 
     def detect_repeating_cycle_in_rolling(self) -> tuple[int, int]:
         for i in itertools.count():
-            if frozenset(self.round_rocks) in self.SEEN_STATES:
-                first_seen_iteration = self.SEEN_STATES[frozenset(self.round_rocks)]
+            hashable_grid = tuple(tuple(row) for row in self.grid)
+            if hashable_grid in self.SEEN_STATES:
+                first_seen_iteration = self.SEEN_STATES[hashable_grid]
                 cycle_repeat_length = i - first_seen_iteration
 
                 return first_seen_iteration, cycle_repeat_length
 
             else:
-                self.SEEN_STATES[frozenset(self.round_rocks)] = i
+                self.SEEN_STATES[hashable_grid] = i
 
             self.roll_rocks_north()
             self.roll_rocks_west()
@@ -95,46 +94,37 @@ class RockGrid:
         raise Exception("Failed to find cycle pattern in data")
 
 
-def parse_input() -> tuple[set[tuple[int, int]], set[tuple[int, int]], int, int]:
+def parse_input() -> list[list[str]]:
     input_file = open(path.join(path.dirname(__file__), "input.txt"), "r")
     lines = input_file.read().strip().splitlines()
-    round_rocks = set()
-    square_rocks = set()
-    for j, line in enumerate(lines):
-        for i, char in enumerate(line):
-            if char == "O":
-                round_rocks.add((i, j))
-            if char == "#":
-                square_rocks.add((i, j))
-
-    MAX_Y = len(lines)
-    MAX_X = len(lines[0])
-    return round_rocks, square_rocks, MAX_Y, MAX_X
+    return [[char for char in line] for line in lines]
 
 
 def solve_part_1() -> int:
-    round_rocks, square_rocks, MAX_Y, MAX_X = parse_input()
-    rock_grid = RockGrid(round_rocks, square_rocks, MAX_Y, MAX_X)
+    grid = parse_input()
+    rock_grid = RockGrid(grid)
     rock_grid.roll_rocks_north()
-    return rock_grid.calculate_load_on_north(rock_grid.round_rocks)
+    return rock_grid.calculate_load_on_north(rock_grid.grid)
 
 
 def solve_part_2() -> int:
-    round_rocks, square_rocks, MAX_Y, MAX_X = parse_input()
-    rock_grid = RockGrid(round_rocks, square_rocks, MAX_Y, MAX_X)
+    grid = parse_input()
+    rock_grid = RockGrid(grid)
 
     (
         first_seen_iteration,
         cycle_repeat_length,
     ) = rock_grid.detect_repeating_cycle_in_rolling()
 
-    seen_id_billionth = (
+    first_seen_iteration_number_of_billionth = (
         first_seen_iteration
         + (1_000_000_000 - first_seen_iteration) % cycle_repeat_length
     )
 
     billionth_iteration = list(rock_grid.SEEN_STATES.keys())[
-        list(rock_grid.SEEN_STATES.values()).index(seen_id_billionth)
+        list(rock_grid.SEEN_STATES.values()).index(
+            first_seen_iteration_number_of_billionth
+        )
     ]
     return rock_grid.calculate_load_on_north(billionth_iteration)
 
